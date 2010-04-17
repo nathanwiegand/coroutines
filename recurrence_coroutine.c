@@ -1,60 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-typedef struct coroutine_state coroutine_state;
-struct coroutine_state {
-  void *state;
-  long current;
-  unsigned char done;
-  coroutine_state *left;
-  coroutine_state *right;
-  coroutine_state *next;
-  coroutine_state *tail;
-};
-
-
-coroutine_state* createCoroutineState() {
-  coroutine_state *s = (coroutine_state*) malloc(sizeof (coroutine_state));
-  bzero(s, sizeof(coroutine_state));
-  return s;
-}
-
-coroutine_state *getTail(coroutine_state* s) {
-  while(s->next) s = s->next;
-  return s;
-}
-
-#define initializeCoroutineState(_st, str,my)                                 \
-  str *my = (str*) _st->state;                                                \
-  switch(_st->current) {                                                      \
-  case 0:                                                                     \
-  if(_st->state == 0) {                                                       \
-    _st->state = (void*) malloc(sizeof (str));                                \
-    bzero(_st->state, sizeof(str));                                           \
-  }                                                                           \
-  my = (str*) _st->state;
-
-#define recur(s,f)                                                            \
-  do{s->next = createCoroutineState();                                        \
-  while(!s->next->done) {typeof(f) tmp =  f; s->current = __LINE__;           \
-  if(!getTail(s)->done) return tmp; case __LINE__: 1;}}while(0);
-
-#define yield(f)                                                              \
-  do{s->current = __LINE__;s->next = 0;  return f; case __LINE__: 1;} while(0); 
-
-#define finalizeCoroutine(s) } s->done = 1; s->next = 0;
-
-
-
-/* ************************************************************************* */
+#include "coroutines.h"
 
 typedef struct {
   int a;
   int b; 
   int c; 
-} fib_state;
-
+} FibState;
 
 typedef struct Tree Tree;
 
@@ -87,25 +40,17 @@ void insert(Tree *t, int x) {
   }
 }
 
-void printTree(Tree *t) {
-  printf("%d ", t->value);
-  if(t->left) printTree(t->left);
-  if(t->right) printTree(t->right);
-}
-
 typedef struct {
   Tree *tree;
-} tree_it_state;
+} TreeIteratorState;
 
-
-
-void printStack(coroutine_state *s) {
-  coroutine_state *u;
+void printStack(CoroutineState *s) {
+  CoroutineState *u;
   for(u = s; u; u=u->next)  {
-    tree_it_state *state = u->state;
+    TreeIteratorState *state = u->state;
     printf("_%ld ", u->current);
     if(state) {
-      Tree *tree = ((tree_it_state*) u->state)->tree;
+      Tree *tree = ((TreeIteratorState*) u->state)->tree;
       printf("%d",tree ? tree->value: -1);
     } 
     if(u->done) {printf(" d");} else {printf(" _");}
@@ -114,25 +59,57 @@ void printStack(coroutine_state *s) {
   printf("@\n");
 }
 
-
-int tree_iterator(Tree *t, coroutine_state *s) {
-  initializeCoroutineState(s,tree_it_state, mystate); 
+int treePreOrderIterator(Tree *t, CoroutineState *s) {
+  initializeCoroutineState(s,TreeIteratorState, mystate); 
   mystate->tree = t;
-
-  if(mystate->tree->left)
-    recur (s,tree_iterator (mystate->tree->left, s->next)); 
 
   yield (mystate->tree->value);
 
+  if(mystate->tree->left)
+    recur (s,treePreOrderIterator(mystate->tree->left, s->next)); 
+
   if(mystate->tree->right) 
-    recur (s,tree_iterator (mystate->tree->right, s->next)); 
+    recur (s,treePreOrderIterator(mystate->tree->right, s->next)); 
 
   finalizeCoroutine(s); 
   return 0;
 }
 
-int fibs(coroutine_state *s) {
-  initializeCoroutineState(s,fib_state, mystate); 
+int treePostOrderIterator(Tree *t, CoroutineState *s) {
+  initializeCoroutineState(s,TreeIteratorState, mystate); 
+  mystate->tree = t;
+
+  if(mystate->tree->left)
+    recur (s, treePostOrderIterator(mystate->tree->left, s->next)); 
+
+  if(mystate->tree->right) 
+    recur (s, treePostOrderIterator(mystate->tree->right, s->next)); 
+
+  yield (mystate->tree->value);
+
+  finalizeCoroutine(s); 
+  return 0;
+}
+
+
+int treeInOrderIterator(Tree *t, CoroutineState *s) {
+  initializeCoroutineState(s,TreeIteratorState, mystate); 
+  mystate->tree = t;
+
+  if(mystate->tree->left)
+    recur (s, treeInOrderIterator(mystate->tree->left, s->next)); 
+
+  yield (mystate->tree->value);
+
+  if(mystate->tree->right) 
+    recur (s, treeInOrderIterator(mystate->tree->right, s->next)); 
+
+  finalizeCoroutine(s); 
+  return 0;
+}
+
+int fibs(CoroutineState *s) {
+  initializeCoroutineState(s, FibState, mystate); 
 
   mystate->a = 0;
   mystate->b = 1;
@@ -149,13 +126,11 @@ int fibs(coroutine_state *s) {
 }
 
 
-int fibs2(int a, int b, coroutine_state *s) {
-  initializeCoroutineState(s, fib_state, mystate);
+int fibs2(int a, int b, CoroutineState *s) {
+  initializeCoroutineState(s, FibState, mystate);
 
   mystate->a = a; mystate->b = b;
-
   yield(mystate->a);
-
   recur(s,fibs2(mystate->b, mystate->a+mystate->b, s->next));
 
   finalizeCoroutine(s);
@@ -165,27 +140,57 @@ int fibs2(int a, int b, coroutine_state *s) {
 int main() {
   int i;
   int max = 0;
-  coroutine_state *s = createCoroutineState();
   Tree *root = createTree(4);
+  CoroutineState *s;
+
   insert(root, 2);
   insert(root, 1);  /*          4              */
   insert(root, 3);  /*     2         6         */
   insert(root, 6);  /*   1   3     5    7      */
   insert(root, 5);
   insert(root, 7);
-  do {
-    printf("!%d! ", tree_iterator(root, s));
-  } while(!s->done);
-  printf("\n");
-  max = 20; 
-  s = createCoroutineState();
 
+  /* iterate over the whole tree, inorder */
+  s = createCoroutineState();
+  while(1) {
+    int v = treeInOrderIterator(root, s);
+    if(s->done)
+      break;
+    printf("!%d! ", v);
+  }
+  printf("\n");
+
+  /* iterate over the whole tree, pre-order */
+  s = createCoroutineState();
+  while(1) {
+    int v = treePreOrderIterator(root, s);
+    if(s->done)
+      break;
+    printf("!%d! ", v);
+  }
+  printf("\n");
+
+  /* iterate over the whole tree, post-order */
+  s = createCoroutineState();
+  while(1) {
+    int v = treePostOrderIterator(root, s);
+    if(s->done)
+      break;
+    printf("!%d! ", v);
+  }
+  printf("\n");
+
+
+  max = 20; 
+
+  /* pull the first `max' fibs */
+  s = createCoroutineState();
   for(i = 0; i < max; i++) {
     printf("%d ", fibs(s));
   }
-
   printf("\n");
 
+  /* pull the first `max' fibs */
   s = createCoroutineState();
   for(i = 0; i < max; i++) {
     printf("%d ", fibs2(1,1,s));
