@@ -63,7 +63,7 @@ int treePreOrderIterator(Tree *t, CoroutineState *s) {
   initializeCoroutineState(s,TreeIteratorState, mystate); 
   mystate->tree = t;
 
-  yield (mystate->tree->value);
+  yield (s,mystate->tree->value);
 
   if(mystate->tree->left)
     recur (s,treePreOrderIterator(mystate->tree->left, s->next)); 
@@ -85,7 +85,7 @@ int treePostOrderIterator(Tree *t, CoroutineState *s) {
   if(mystate->tree->right) 
     recur (s, treePostOrderIterator(mystate->tree->right, s->next)); 
 
-  yield (mystate->tree->value);
+  yield (s,mystate->tree->value);
 
   finalizeCoroutine(s); 
   return 0;
@@ -99,7 +99,7 @@ int treeInOrderIterator(Tree *t, CoroutineState *s) {
   if(mystate->tree->left)
     recur (s, treeInOrderIterator(mystate->tree->left, s->next)); 
 
-  yield (mystate->tree->value);
+  yield (s,mystate->tree->value);
 
   if(mystate->tree->right) 
     recur (s, treeInOrderIterator(mystate->tree->right, s->next)); 
@@ -116,7 +116,7 @@ int fibs(CoroutineState *s) {
 
   while(1) {
     int f;
-    yield(mystate->b);
+    yield(s,mystate->b);
     f = mystate->a;
     mystate->a = mystate->b;
     mystate->b += f;
@@ -130,7 +130,7 @@ int fibs2(int a, int b, CoroutineState *s) {
   initializeCoroutineState(s, FibState, mystate);
 
   mystate->a = a; mystate->b = b;
-  yield(mystate->a);
+  yield(s,mystate->a);
   recur(s,fibs2(mystate->b, mystate->a+mystate->b, s->next));
 
   finalizeCoroutine(s);
@@ -196,7 +196,6 @@ int main() {
     printf("%d ", fibs2(1,1,s));
   }
   printf("\n");
-
 
   return 0;
 }

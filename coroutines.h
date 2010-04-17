@@ -24,23 +24,35 @@ CoroutineState *getTail(CoroutineState* s) {
   return s;
 }
 
-#define initializeCoroutineState(_st, str,my)                                 \
-  str *my = (str*) _st->state;                                                \
-  switch(_st->current) {                                                      \
+#define initializeCoroutineState(coroutineState, UserStateType,userStateVar)  \
+  UserStateType *userStateVar = (UserStateType*) coroutineState->state;       \
+  switch(coroutineState->current) {                                           \
   case 0:                                                                     \
-  if(_st->state == 0) {                                                       \
-    _st->state = (void*) malloc(sizeof (str));                                \
-    bzero(_st->state, sizeof(str));                                           \
+  if(coroutineState->state == 0) {                                            \
+    coroutineState->state = (void*) malloc(sizeof (UserStateType));           \
+    bzero(coroutineState->state, sizeof(UserStateType));                      \
   }                                                                           \
-  my = (str*) _st->state;
+  userStateVar = (UserStateType*) coroutineState->state;                      \
 
-#define recur(s,f)                                                            \
-  do{s->next = createCoroutineState();                                        \
-  while(!s->next->done) {typeof(f) tmp =  f; s->current = __LINE__;           \
-  if(!getTail(s)->done) return tmp; case __LINE__: 1;}}while(0);
+#define recur(coroutineState,func)                                            \
+  do{                                                                         \
+    coroutineState->next = createCoroutineState();                            \
+    while(!coroutineState->next->done) {                                      \
+      typeof(func) tmp =  func;                                               \
+      coroutineState->current = __LINE__;                                     \
+      if(!getTail(coroutineState)->done)                                      \
+        return tmp;                                                           \
+      case __LINE__: 1;                                                       \
+    }                                                                         \
+  }while(0);                                                                  \
 
-#define yield(f)                                                              \
-  do{s->current = __LINE__;s->next = 0;  return f; case __LINE__: 1;} while(0); 
+#define yield(coroutineState, value)                                          \
+  do{                                                                         \
+    coroutineState->current = __LINE__;                                       \
+    coroutineState->next = 0;                                                 \
+    return value;                                                             \
+    case __LINE__: 1;                                                         \
+  } while(0);                                                                 
 
 #define finalizeCoroutine(s) } s->done = 1; s->next = 0;
 
