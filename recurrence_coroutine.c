@@ -140,9 +140,10 @@ int fibs2(int a, int b, CoroutineState *s) {
 int main() {
   int i;
   int max = 0;
-  Tree *root = createTree(4);
+
   CoroutineState *s;
 
+  Tree *root = createTree(4);
   insert(root, 2);
   insert(root, 1);  /*          4              */
   insert(root, 3);  /*     2         6         */
