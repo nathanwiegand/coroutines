@@ -25,10 +25,6 @@ CoroutineState* createCoroutineState() {
   return s;
 }
 
-CoroutineState *getTail(CoroutineState* s) {
-  return s->parent ? s->parent->tail : s->tail;
-}
-
 #define initializeCoroutineState(coroutineState, UserStateType, userStateVar) \
   UserStateType *userStateVar = (UserStateType*) coroutineState->state;       \
   switch(coroutineState->current) {                                           \
