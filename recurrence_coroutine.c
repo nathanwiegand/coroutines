@@ -44,21 +44,9 @@ typedef struct {
   Tree *tree;
 } TreeIteratorState;
 
-void printStack(CoroutineState *s) {
-  CoroutineState *u;
-  for(u = s; u; u=u->next)  {
-    TreeIteratorState *state = u->state;
-    printf("_%ld ", u->current);
-    if(state) {
-      Tree *tree = ((TreeIteratorState*) u->state)->tree;
-      printf("%d",tree ? tree->value: -1);
-    } 
-    if(u->done) {printf(" d");} else {printf(" _");}
-    printf("_ ");
-  }
-  printf("@\n");
-}
-
+/* This is a pre-order iterator over a binary tree.  It navigates a binary tree
+ * in the pattern Root -> Left -> Right.
+ */
 int treePreOrderIterator(Tree *t, CoroutineState *s) {
   initializeCoroutineState(s,TreeIteratorState, mystate); 
   mystate->tree = t;
@@ -66,15 +54,18 @@ int treePreOrderIterator(Tree *t, CoroutineState *s) {
   yield (s,mystate->tree->value);
 
   if(mystate->tree->left)
-    recur (s,treePreOrderIterator(mystate->tree->left, s->next)); 
+    recur (s, treePreOrderIterator(mystate->tree->left, s->next)); 
 
   if(mystate->tree->right) 
-    recur (s,treePreOrderIterator(mystate->tree->right, s->next)); 
+    recur (s, treePreOrderIterator(mystate->tree->right, s->next)); 
 
   finalizeCoroutine(s); 
   return 0;
 }
 
+/* This is a post-order iterator over a binary tree.  It navigates a binary tree
+ * in the pattern Left -> Right -> Root.
+ */
 int treePostOrderIterator(Tree *t, CoroutineState *s) {
   initializeCoroutineState(s,TreeIteratorState, mystate); 
   mystate->tree = t;
@@ -91,7 +82,9 @@ int treePostOrderIterator(Tree *t, CoroutineState *s) {
   return 0;
 }
 
-
+/* This is a in-order iterator over a binary tree.  It navigates a binary tree
+ * in the pattern Left -> Root -> Right.
+ */
 int treeInOrderIterator(Tree *t, CoroutineState *s) {
   initializeCoroutineState(s,TreeIteratorState, mystate); 
   mystate->tree = t;
@@ -108,6 +101,9 @@ int treeInOrderIterator(Tree *t, CoroutineState *s) {
   return 0;
 }
 
+/* This function just computes Fibonacci numbers forever.  Since we 'yield'
+ * inside the 'while'-loop, it allows you to treat this as an iterator.
+ */
 int fibs(CoroutineState *s) {
   initializeCoroutineState(s, FibState, mystate); 
 
@@ -125,6 +121,12 @@ int fibs(CoroutineState *s) {
   return 0;
 }
 
+/* This is just like how you compute fibs efficiently in Haskell.  This function
+ * is equivalent to:
+ *     fibs x y = x : fibs y (x+y)
+ * The Haskell version is obviously an infinite list, where as this one can be
+ * thought of as an iterator over the infinite list.
+ */
 
 int fibs2(int a, int b, CoroutineState *s) {
   initializeCoroutineState(s, FibState, mystate);
@@ -157,7 +159,7 @@ int main() {
     int v = treeInOrderIterator(root, s);
     if(s->done)
       break;
-    printf("!%d! ", v);
+    printf("|%d| ", v);
   }
   printf("\n");
 
@@ -167,7 +169,7 @@ int main() {
     int v = treePreOrderIterator(root, s);
     if(s->done)
       break;
-    printf("!%d! ", v);
+    printf("|%d| ", v);
   }
   printf("\n");
 
@@ -177,12 +179,12 @@ int main() {
     int v = treePostOrderIterator(root, s);
     if(s->done)
       break;
-    printf("!%d! ", v);
+    printf("|%d| ", v);
   }
   printf("\n");
 
 
-  max = 20; 
+  max = 100; 
 
   /* pull the first `max' fibs */
   s = createCoroutineState();
