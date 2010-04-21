@@ -65,7 +65,8 @@ CoroutineState* createCoroutineState() {
     case __LINE__: 1;                                                         \
   } while(0);                                                                 
 
-#define finalizeCoroutine(s)      }                                           \
+#define finalizeCoroutine(s)                                                  \
+  }                                                                           \
   s->done = 1;                                                                \
   free(s->next);                                                              \
   s->next = 0;
