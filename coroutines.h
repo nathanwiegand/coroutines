@@ -69,6 +69,9 @@ CoroutineState *getTail(CoroutineState* s) {
     case __LINE__: 1;                                                         \
   } while(0);                                                                 
 
-#define finalizeCoroutine(s) } s->done = 1; s->next = 0;
+#define finalizeCoroutine(s)      }                                           \
+  s->done = 1;                                                                \
+  free(s->next);                                                              \
+  s->next = 0;
 
 #endif /*__COROUTINES_H__ */

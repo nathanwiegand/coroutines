@@ -133,7 +133,7 @@ int fibs2(int a, int b, CoroutineState *s) {
 
   mystate->a = a; mystate->b = b;
   yield(s,mystate->a);
-  recur(s,fibs2(mystate->b, mystate->a+mystate->b, s->next));
+  recur (s,fibs2(mystate->b, mystate->a+mystate->b, s->next));
 
   finalizeCoroutine(s);
   return 0;
