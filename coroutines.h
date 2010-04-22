@@ -51,7 +51,7 @@ CoroutineState* createCoroutineState() {
         return tmp;                                                           \
       case __LINE__: 1;                                                       \
     }                                                                         \
-  } while(0);                                                                 \
+  } while(0)                                                                  \
 
 #define yield(coroutineState, value)                                          \
   do{                                                                         \
@@ -63,7 +63,7 @@ CoroutineState* createCoroutineState() {
     coroutineState->next = 0;                                                 \
     return value;                                                             \
     case __LINE__: 1;                                                         \
-  } while(0);                                                                 
+  } while(0)                                                                  
 
 #define finalizeCoroutine(s)                                                  \
   }                                                                           \
